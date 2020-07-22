@@ -11,4 +11,7 @@ gvm install semantic_version
 
 # to switch a certain version, even though it's not installed already.
 gvm switch semantic_version
+
+# to delete a certain installed version
+gvm delete semantic_version
 ```
