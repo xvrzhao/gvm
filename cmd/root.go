@@ -23,11 +23,12 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/spf13/cobra"
-	"os"
-
 	homedir "github.com/mitchellh/go-homedir"
+	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"log"
+	"os"
+	"runtime"
 )
 
 var cfgFile string
@@ -45,6 +46,12 @@ to quickly create a Cobra application.`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	//	Run: func(cmd *cobra.Command, args []string) { },
+
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		if runtime.GOOS == "windows" {
+			log.Fatalln("The Windows platform is not yet supported.")
+		}
+	},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -93,5 +100,11 @@ func initConfig() {
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Println("Using config file:", viper.ConfigFileUsed())
+	}
+}
+
+func isRootUser(cmd *cobra.Command, args []string) {
+	if os.Getuid() != 0 {
+		log.Fatalf("Permission denied. Please execute the `install` command as the root user, add `sudo` before the command.")
 	}
 }

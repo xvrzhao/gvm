@@ -6,30 +6,20 @@ import (
 	"fmt"
 	e "github.com/xvrzhao/utils/errors"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
+	"strings"
+	"syscall"
 )
 
-func mkGvmRoot() error {
-	fileInfo, err := os.Stat(gvmRoot)
-	if os.IsNotExist(err) {
-		if err = os.MkdirAll(gvmRoot, os.ModePerm); err != nil {
-			return e.Wrapper(err, "gvmRoot mkdir error")
-		}
-		return nil
-	}
-	if err != nil {
-		return e.Wrapper(err, "gvmRoot get fileInfo error")
-	}
-	if !fileInfo.IsDir() {
-		return errors.New(fmt.Sprintf("%s exists but isn't a dir", gvmRoot))
-	}
-	return nil
-}
-
 func unCompress(tarGzFile, dstPath string) (err error) {
+	oldUmask := syscall.Umask(0)
+	defer syscall.Umask(oldUmask)
+
 	if err = os.MkdirAll(dstPath, os.ModePerm); err != nil {
 		err = e.Wrapper(err, "dstPath mkdir error")
 		return
@@ -76,5 +66,52 @@ func download(v *version) (dlFilename string, err error) {
 	}
 
 	dlFilename = df
+	return
+}
+
+var semVerError = errors.New("invalid semantic version")
+
+func checkSemVer(semVer string) (v Semantics, err error) {
+	s := strings.Split(semVer, ".")
+	if len(s) < 2 || len(s) > 3 {
+		err = semVerError
+		return
+	}
+	for idx, semverItem := range s {
+		var num int
+		num, err = strconv.Atoi(semverItem)
+		if err != nil {
+			err = semVerError
+			return
+		}
+		switch idx {
+		case 0:
+			v.major = uint8(num)
+		case 1:
+			v.minor = uint8(num)
+		case 2:
+			v.patch = uint8(num)
+		}
+	}
+	return
+}
+
+func GetInstalledGoVersions() (versions []string, err error) {
+	versions = make([]string, 0)
+
+	fis, err := ioutil.ReadDir(gvmRoot)
+	if os.IsNotExist(err) {
+		err = nil
+		return
+	}
+	if err != nil {
+		err = e.Wrapper(err, "gvmRoot readdir error")
+		return
+	}
+	for _, fi := range fis {
+		if fi.IsDir() && fi.Name()[0] != '.' && fi.Name()[:2] == "go" {
+			versions = append(versions, fi.Name()[2:])
+		}
+	}
 	return
 }

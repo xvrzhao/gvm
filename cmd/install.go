@@ -22,24 +22,31 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"errors"
+	"fmt"
 	"github.com/spf13/cobra"
 	"gvm/funcs"
 )
 
 // installCmd represents the install command
 var installCmd = &cobra.Command{
-	Use:   "install",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		v := funcs.NewVersion(1, 11, 1, true)
+	Use:   "install semantic_version",
+	Short: "Install a specific version of Go",
+	Long:  "Install a specific version of Go, such as: `sudo gvm install 1.14.6`. If you are in China, add the flag `--cn`.",
+	PreRun: isRootUser,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) < 1 {
+			return errors.New("need a version of Go to install")
+		}
+		inCn, _ := cmd.Flags().GetBool("cn")
+		v, err := funcs.NewVersion(args[0], inCn)
+		if err != nil {
+			return err
+		}
 		v.Download()
 		v.UnCompress()
+		fmt.Println("> Complete!")
+		return nil
 	},
 }
 
@@ -55,4 +62,6 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// installCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+
+	installCmd.Flags().Bool("cn", false, "Use https://golang.google.cn to download.")
 }
