@@ -1,8 +1,8 @@
 package funcs
 
 const (
-	dlPrefix   = "https://golang.org/dl/"
-	dlPrefixCn = "https://golang.google.cn/dl/"
+	prefixOfDownloadURL   = "https://golang.org/dl/"
+	prefixOfDownloadURLCn = "https://golang.google.cn/dl/"
 
 	tmpPath  = "/tmp/gvm"
 	usrLocal = "/usr/local"
@@ -10,10 +10,10 @@ const (
 	goRoot   = usrLocal + "/go"
 )
 
-type finishState int
+type myBool int
 
 const (
-	fsUnknown finishState = iota
-	fsFinished
-	fsUnFinished
+	unknown myBool = iota
+	yes
+	no
 )

@@ -16,42 +16,43 @@ import (
 	"syscall"
 )
 
-func unCompress(tarGzFile, dstPath string) (err error) {
+func decompress(tarGzFile, dstPath string) error {
 	oldUmask := syscall.Umask(0)
 	defer syscall.Umask(oldUmask)
 
-	if err = os.MkdirAll(dstPath, os.ModePerm); err != nil {
-		err = e.Wrapper(err, "dstPath mkdir error")
-		return
+	if err := os.MkdirAll(dstPath, os.ModePerm); err != nil {
+		return e.Wrapper(err, "mkdir %s error", dstPath)
 	}
 
 	cmd := exec.Command("tar", "-C", dstPath, "-xzf", tarGzFile)
 	cmdStdErrBuf := new(bytes.Buffer)
 	cmd.Stderr = cmdStdErrBuf
 
-	if err = cmd.Run(); err != nil {
-		return e.Wrapper(fmt.Errorf("Cmd.Run error: %w, stderr output: %q", err, cmdStdErrBuf.String()),
+	if err := cmd.Run(); err != nil {
+		return e.Wrapper(fmt.Errorf("command run error: %w, stderr output: %q", err, cmdStdErrBuf.String()),
 			"command run error")
 	}
 
 	return nil
 }
 
-func download(v *version) (dlFilename string, err error) {
-	res, err := http.Get(v.fullURL)
+func download(v *version) (downloadedTarGzFile string, err error) {
+	res, err := http.Get(v.downloadURL)
 	if err != nil {
-		err = e.Wrapper(err, "http get go package file error")
+		err = e.Wrapper(err, "error when HTTP GET %s", v.downloadURL)
 		return
 	}
 	defer res.Body.Close()
 
-	err = os.MkdirAll(tmpPath, os.ModePerm)
-	if err != nil {
-		err = e.Wrapper(err, "tmp path mkdir error")
+	oldUmask := syscall.Umask(0)
+	defer syscall.Umask(oldUmask)
+
+	if err = os.MkdirAll(tmpPath, os.ModePerm); err != nil {
+		err = e.Wrapper(err, "error when mkdir %s", tmpPath)
 		return
 	}
 
-	df := filepath.Join(tmpPath, v.filename)
+	df := filepath.Join(tmpPath, v.tarGzFile)
 	file, err := os.Create(df)
 	if err != nil {
 		err = e.Wrapper(err, "create local tmp file error")
@@ -65,13 +66,13 @@ func download(v *version) (dlFilename string, err error) {
 		return
 	}
 
-	dlFilename = df
+	downloadedTarGzFile = df
 	return
 }
 
 var semVerError = errors.New("invalid semantic version")
 
-func checkSemVer(semVer string) (v Semantics, err error) {
+func checkSemver(semVer string) (v semantics, err error) {
 	s := strings.Split(semVer, ".")
 	if len(s) < 2 || len(s) > 3 {
 		err = semVerError
@@ -96,7 +97,7 @@ func checkSemVer(semVer string) (v Semantics, err error) {
 	return
 }
 
-func GetInstalledGoVersions() (versions []string, err error) {
+func GetInstalledGoVersionStrings() (versions []string, err error) {
 	versions = make([]string, 0)
 
 	fis, err := ioutil.ReadDir(gvmRoot)

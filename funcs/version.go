@@ -9,11 +9,11 @@ import (
 	"runtime"
 )
 
-type Semantics struct {
+type semantics struct {
 	major, minor, patch uint8
 }
 
-func (s Semantics) String() string {
+func (s semantics) String() string {
 	v := fmt.Sprintf("%d.%d", s.major, s.minor)
 	if s.patch != 0 {
 		v = fmt.Sprintf("%s.%d", v, s.patch)
@@ -23,148 +23,172 @@ func (s Semantics) String() string {
 
 type version struct {
 	// env
-	Semantics
-	os       string
-	arch     string
-	filename string
-	fullURL  string
+	semantics
+	os          string
+	arch        string
+	tarGzFile   string
+	downloadURL string
 
 	// download
-	dling      bool
-	finishDl   finishState
-	dlFilename string
+	isDownloaded        myBool
+	downloadedTarGzFile string
 
-	// unCompress
-	ucing     bool
-	finishUc  finishState
-	ucDirname string
+	// decompress
+	isDecompressed myBool
+	dir            string
 }
 
-func NewVersion(ver string, inCn bool) (v *version, err error) {
-	sem, err := checkSemVer(ver)
+func NewVersion(semver string, inCn bool) (v *version, err error) {
+	sem, err := checkSemver(semver)
 	if err != nil {
-		err = e.Wrapper(err, "checkSemVer error")
+		err = e.Wrapper(err, "checkSemver error")
 		return
 	}
 
 	v = &version{
-		Semantics: sem,
-		os:        runtime.GOOS,
-		arch:      runtime.GOARCH,
-		filename:  "",
-		fullURL:   "",
+		semantics:   sem,
+		os:          runtime.GOOS,
+		arch:        runtime.GOARCH,
+		tarGzFile:   "",
+		downloadURL: "",
 
-		dling:      false,
-		finishDl:   fsUnknown,
-		dlFilename: "",
+		isDownloaded:        unknown,
+		downloadedTarGzFile: "",
 
-		ucing:     false,
-		finishUc:  fsUnknown,
-		ucDirname: "",
+		isDecompressed: unknown,
+		dir:            "",
 	}
 
-	v.buildPackFilename()
-	v.buildFullURL(inCn)
+	v.buildTarGzFile()
+	v.buildDownloadURL(inCn)
 
-	if installed, ucDir, err := v.checkInstallation(); err != nil {
-		err = e.Wrapper(err, "check is installed error")
+	if downloaded, downloadedTarGzFile, err := v.checkDownloading(); err != nil {
+		err = e.Wrapper(err, "checkDownloading error")
+		return
+	} else if downloaded {
+		v.isDownloaded, v.downloadedTarGzFile = yes, downloadedTarGzFile
+	} else {
+		v.isDownloaded = no
+	}
+
+	if installed, dir, err := v.checkInstallation(); err != nil {
+		err = e.Wrapper(err, "checkInstallation error")
 		return
 	} else if installed {
-		v.finishUc, v.ucDirname = fsFinished, ucDir
+		v.isDecompressed, v.dir = yes, dir
 	} else {
-		v.finishUc = fsUnFinished
+		v.isDecompressed = no
 	}
 
 	return
 }
 
-func (v *version) buildPackFilename() string {
-	v.filename = fmt.Sprintf("go%v.%s-%s.tar.gz", v.Semantics, v.os, v.arch)
-	return v.filename
+func (v *version) buildTarGzFile() string {
+	v.tarGzFile = fmt.Sprintf("go%v.%s-%s.tar.gz", v.semantics, v.os, v.arch)
+	return v.tarGzFile
 }
 
-func (v *version) buildFullURL(inCn bool) string {
-	if v.filename == "" {
-		log.Fatalf("failed to build fullURL of version, cause filename is not built yet")
+func (v *version) buildDownloadURL(inCn bool) string {
+	if v.tarGzFile == "" {
+		log.Fatal("*version.buildDownloadURL: *version.tarGzFile is empty")
 	}
-	pf := dlPrefix
+
+	pf := prefixOfDownloadURL
 	if inCn {
-		pf = dlPrefixCn
+		pf = prefixOfDownloadURLCn
 	}
-	v.fullURL = pf + v.filename
-	return v.fullURL
+
+	v.downloadURL = pf + v.tarGzFile
+	return v.downloadURL
 }
 
-func (v *version) Download() {
-	v.dling = true
-	fmt.Printf("> Downloading the go archive from %s ... ", v.fullURL)
+func (v *version) Download(force bool) (err error) {
+	if v.isDownloaded == yes && !force {
+		err = nil
+		return
+	}
 
-	df, err := download(v)
+	file, err := download(v)
 	if err != nil {
-		fmt.Println()
-		e.Log(e.Wrapper(err, "version download error"))
-		os.Exit(1)
+		err = e.Wrapper(err, "download error")
+		return
 	}
 
-	v.dling, v.finishDl, v.dlFilename = false, fsUnFinished, df
-	fmt.Println("Done.")
+	v.isDownloaded, v.downloadedTarGzFile = yes, file
+	return
 }
 
-func (v *version) UnCompress() {
-	v.ucing = true
-	fmt.Printf("> Extract to %s from downloaded archive ... ", gvmRoot)
+func (v *version) Decompress() error {
+	if v.isDownloaded != yes {
+		log.Fatal("*version.Decompress: not downloaded")
+	}
 
 	goDir := filepath.Join(gvmRoot, "go")
-	vgoDir := filepath.Join(gvmRoot, fmt.Sprintf("go%v", v.Semantics))
+	vgoDir := filepath.Join(gvmRoot, fmt.Sprintf("go%v", v.semantics))
 
 	if err := os.RemoveAll(goDir); err != nil {
-		fmt.Println()
-		e.Log(e.Wrapper(err, "remove %s error", goDir))
-		os.Exit(1)
+		return e.Wrapper(err, "RemoveAll %s error", goDir)
 	}
 
 	if err := os.RemoveAll(vgoDir); err != nil {
-		fmt.Println()
-		e.Log(e.Wrapper(err, "remove %s error", vgoDir))
-		os.Exit(1)
+		return e.Wrapper(err, "RemoveAll %s error", vgoDir)
 	}
 
-	if err := unCompress(v.dlFilename, gvmRoot); err != nil {
-		fmt.Println()
-		e.Log(e.Wrapper(err, "unCompress error"))
-		os.Exit(1)
+	if err := decompress(v.downloadedTarGzFile, gvmRoot); err != nil {
+		return e.Wrapper(err, "decompress error")
 	}
 
 	if err := os.Rename(goDir, vgoDir); err != nil {
-		fmt.Println()
-		e.Log(e.Wrapper(err, "rename go to gox.x.x error"))
-		os.Exit(1)
+		return e.Wrapper(err, "error when renaming %s to %s", goDir, vgoDir)
 	}
 
-	v.ucing, v.finishUc, v.ucDirname = false, fsUnFinished, vgoDir
-	fmt.Println("Done.")
+	v.isDecompressed, v.dir = yes, vgoDir
+	return nil
 }
 
-func (v *version) checkInstallation() (installed bool, ucDir string, err error) {
-	vStr := "go" + v.Semantics.String()
-	versions, err := GetInstalledGoVersions()
-	if err != nil {
-		err = e.Wrapper(err, "GetInstalledGoVersions error")
+func (v *version) checkDownloading() (downloaded bool, downloadedTarGzFile string, err error) {
+	if v.tarGzFile == "" {
+		log.Fatal("*version.checkDownloading: *version.tarGzFile is empty")
+	}
+
+	downloadedTarGzFile = filepath.Join(tmpPath, v.tarGzFile)
+	_, err = os.Stat(downloadedTarGzFile)
+	if os.IsNotExist(err) {
+		err = nil
 		return
 	}
-	for _, ver := range versions {
-		if ver == vStr {
-			installed, ucDir = true, filepath.Join(gvmRoot, vStr)
+	if err != nil {
+		err = e.Wrapper(err, "error when getting fileInfo of downloaded tarGzFile")
+		return
+	}
+
+	downloaded = true
+	return
+}
+
+func (v *version) checkInstallation() (installed bool, versionDir string, err error) {
+	thisVersionStr := fmt.Sprintf("go%v", v.semantics)
+	versionStrings, err := GetInstalledGoVersionStrings()
+	if err != nil {
+		err = e.Wrapper(err, "GetInstalledGoVersionStrings error")
+		return
+	}
+
+	for _, versionStr := range versionStrings {
+		if versionStr == thisVersionStr {
+			installed, versionDir = true, filepath.Join(gvmRoot, thisVersionStr)
 			return
 		}
 	}
+
 	installed = false
 	return
 }
 
 func (v *version) IsInstalled() bool {
-	if v.finishUc == fsUnFinished {
+	if v.isDecompressed == no {
 		return true
 	}
+
 	return false
 }

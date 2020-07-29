@@ -44,7 +44,7 @@ var installCmd = &cobra.Command{
 			return err
 		}
 		v.Download()
-		v.UnCompress()
+		v.Decompress()
 		fmt.Println("> Complete!")
 		return nil
 	},
