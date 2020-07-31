@@ -52,32 +52,34 @@ func download(v *version) (downloadedTarGzFile string, err error) {
 		return
 	}
 
-	df := filepath.Join(tmpPath, v.tarGzFile)
-	file, err := os.Create(df)
+	dstFile := filepath.Join(tmpPath, v.tarGzFile)
+	file, err := os.Create(dstFile)
 	if err != nil {
-		err = e.Wrapper(err, "create local tmp file error")
+		err = e.Wrapper(err, "error when creating dstFile")
 		return
 	}
 	defer file.Close()
 
 	_, err = io.Copy(file, res.Body)
 	if err != nil {
-		err = e.Wrapper(err, "downloading error")
+		err = e.Wrapper(err, "error when copying from res.Body to file")
 		return
 	}
 
-	downloadedTarGzFile = df
+	downloadedTarGzFile = dstFile
 	return
 }
 
 var semVerError = errors.New("invalid semantic version")
 
-func checkSemver(semVer string) (v semantics, err error) {
+func checkSemver(semVer string) (sem semantics, err error) {
 	s := strings.Split(semVer, ".")
+
 	if len(s) < 2 || len(s) > 3 {
 		err = semVerError
 		return
 	}
+
 	for idx, semverItem := range s {
 		var num int
 		num, err = strconv.Atoi(semverItem)
@@ -87,13 +89,14 @@ func checkSemver(semVer string) (v semantics, err error) {
 		}
 		switch idx {
 		case 0:
-			v.major = uint8(num)
+			sem.major = uint8(num)
 		case 1:
-			v.minor = uint8(num)
+			sem.minor = uint8(num)
 		case 2:
-			v.patch = uint8(num)
+			sem.patch = uint8(num)
 		}
 	}
+
 	return
 }
 
@@ -106,13 +109,15 @@ func GetInstalledGoVersionStrings() (versions []string, err error) {
 		return
 	}
 	if err != nil {
-		err = e.Wrapper(err, "gvmRoot readdir error")
+		err = e.Wrapper(err, "readDir of gvmRoot error")
 		return
 	}
+
 	for _, fi := range fis {
 		if fi.IsDir() && fi.Name()[0] != '.' && fi.Name()[:2] == "go" {
 			versions = append(versions, fi.Name()[2:])
 		}
 	}
+
 	return
 }
