@@ -1,6 +1,7 @@
 package funcs
 
 import (
+	"errors"
 	"fmt"
 	e "github.com/xvrzhao/utils/errors"
 	"log"
@@ -118,9 +119,13 @@ func (v *version) Download(force bool) (err error) {
 	return
 }
 
-func (v *version) Decompress() error {
+func (v *version) Decompress(force bool) error {
+	if v.isDecompressed == yes && !force {
+		return nil
+	}
+
 	if v.isDownloaded != yes {
-		log.Fatal("*version.Decompress: not downloaded")
+		return errors.New("version is not downloaded")
 	}
 
 	goDir := filepath.Join(gvmRoot, "go")
