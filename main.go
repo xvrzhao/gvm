@@ -21,7 +21,7 @@ THE SOFTWARE.
 */
 package main
 
-import "gvm/cmd"
+import "github.com/xvrzhao/gvm/cmd"
 
 func main() {
 	cmd.Execute()
