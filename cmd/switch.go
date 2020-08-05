@@ -25,8 +25,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/spf13/cobra"
+	"github.com/xvrzhao/gvm/funcs"
 	e "github.com/xvrzhao/utils/errors"
-	"gvm/funcs"
 )
 
 // switchCmd represents the switch command

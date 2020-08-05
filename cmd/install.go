@@ -25,8 +25,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/spf13/cobra"
+	"github.com/xvrzhao/gvm/funcs"
 	e "github.com/xvrzhao/utils/errors"
-	"gvm/funcs"
 )
 
 // installCmd represents the install command

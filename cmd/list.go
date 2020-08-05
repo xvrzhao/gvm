@@ -25,15 +25,15 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"gvm/funcs"
+	"github.com/xvrzhao/gvm/funcs"
 )
 
 // listCmd represents the list command
 var listCmd = &cobra.Command{
-	Use:   "list",
+	Use:     "list",
 	Aliases: []string{"ls", "l"},
-	Short: "",
-	Long:  ``,
+	Short:   "",
+	Long:    ``,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		versions, err := funcs.GetInstalledGoVersionStrings()
 		if err != nil {
