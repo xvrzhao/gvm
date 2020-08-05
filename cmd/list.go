@@ -24,33 +24,36 @@ package cmd
 import (
 	"fmt"
 	"github.com/pkg/errors"
-	"gvm/funcs"
-
 	"github.com/spf13/cobra"
+	"gvm/funcs"
 )
 
 // listCmd represents the list command
 var listCmd = &cobra.Command{
 	Use:   "list",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Aliases: []string{"ls", "l"},
+	Short: "",
+	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		versions, err := funcs.GetInstalledGoVersions()
+		versions, err := funcs.GetInstalledGoVersionStrings()
 		if err != nil {
-			return errors.Wrap(err, "GetInstalledGoVersions error")
+			return errors.Wrap(err, "GetInstalledGoVersionStrings error")
 		}
-		if len(versions) < 1 {
+		if len(versions) <= 0 {
 			fmt.Println("empty")
 			return nil
 		}
+
+		curVersion, noVersionErr := funcs.GetCurrentVersionStr()
+
 		for _, version := range versions {
-			fmt.Println(version)
+			if noVersionErr == nil && curVersion == version {
+				fmt.Printf("* %s\n", curVersion)
+			} else {
+				fmt.Printf("  %s\n", version)
+			}
 		}
+
 		return nil
 	},
 }

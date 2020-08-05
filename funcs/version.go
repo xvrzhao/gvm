@@ -22,7 +22,7 @@ func (s semantics) String() string {
 	return v
 }
 
-type version struct {
+type Version struct {
 	// env
 	semantics
 	os          string
@@ -39,14 +39,14 @@ type version struct {
 	dir            string
 }
 
-func NewVersion(semver string, inCn bool) (v *version, err error) {
+func NewVersion(semver string, inCn bool) (v *Version, err error) {
 	sem, err := checkSemver(semver)
 	if err != nil {
 		err = e.Wrapper(err, "checkSemver error")
 		return
 	}
 
-	v = &version{
+	v = &Version{
 		semantics:   sem,
 		os:          runtime.GOOS,
 		arch:        runtime.GOARCH,
@@ -63,9 +63,17 @@ func NewVersion(semver string, inCn bool) (v *version, err error) {
 	v.buildTarGzFile()
 	v.buildDownloadURL(inCn)
 
-	if downloaded, downloadedTarGzFile, err := v.checkDownloading(); err != nil {
-		err = e.Wrapper(err, "checkDownloading error")
+	if err = v.Reload(); err != nil {
+		err = e.Wrapper(err, "version reload error")
 		return
+	}
+
+	return
+}
+
+func (v *Version) Reload() error {
+	if downloaded, downloadedTarGzFile, err := v.checkDownloading(); err != nil {
+		return e.Wrapper(err, "checkDownloading error")
 	} else if downloaded {
 		v.isDownloaded, v.downloadedTarGzFile = yes, downloadedTarGzFile
 	} else {
@@ -73,23 +81,22 @@ func NewVersion(semver string, inCn bool) (v *version, err error) {
 	}
 
 	if installed, dir, err := v.checkInstallation(); err != nil {
-		err = e.Wrapper(err, "checkInstallation error")
-		return
+		return e.Wrapper(err, "checkInstallation error")
 	} else if installed {
 		v.isDecompressed, v.dir = yes, dir
 	} else {
 		v.isDecompressed = no
 	}
 
-	return
+	return nil
 }
 
-func (v *version) buildTarGzFile() string {
+func (v *Version) buildTarGzFile() string {
 	v.tarGzFile = fmt.Sprintf("go%v.%s-%s.tar.gz", v.semantics, v.os, v.arch)
 	return v.tarGzFile
 }
 
-func (v *version) buildDownloadURL(inCn bool) string {
+func (v *Version) buildDownloadURL(inCn bool) string {
 	if v.tarGzFile == "" {
 		log.Fatal("*version.buildDownloadURL: *version.tarGzFile is empty")
 	}
@@ -103,7 +110,7 @@ func (v *version) buildDownloadURL(inCn bool) string {
 	return v.downloadURL
 }
 
-func (v *version) Download(force bool) (err error) {
+func (v *Version) Download(force bool) (err error) {
 	if v.isDownloaded == yes && !force {
 		err = nil
 		return
@@ -119,7 +126,7 @@ func (v *version) Download(force bool) (err error) {
 	return
 }
 
-func (v *version) Decompress(force bool) error {
+func (v *Version) Decompress(force bool) error {
 	if v.isDecompressed == yes && !force {
 		return nil
 	}
@@ -151,7 +158,7 @@ func (v *version) Decompress(force bool) error {
 	return nil
 }
 
-func (v *version) checkDownloading() (downloaded bool, downloadedTarGzFile string, err error) {
+func (v *Version) checkDownloading() (downloaded bool, downloadedTarGzFile string, err error) {
 	if v.tarGzFile == "" {
 		log.Fatal("*version.checkDownloading: *version.tarGzFile is empty")
 	}
@@ -167,11 +174,15 @@ func (v *version) checkDownloading() (downloaded bool, downloadedTarGzFile strin
 		return
 	}
 
+	if !isArchiveValid(downloadedTarGzFile) {
+		return
+	}
+
 	downloaded = true
 	return
 }
 
-func (v *version) checkInstallation() (installed bool, versionDir string, err error) {
+func (v *Version) checkInstallation() (installed bool, versionDir string, err error) {
 	thisVersionStr := fmt.Sprintf("go%v", v.semantics)
 	versionStrings, err := GetInstalledGoVersionStrings()
 	if err != nil {
@@ -180,7 +191,7 @@ func (v *version) checkInstallation() (installed bool, versionDir string, err er
 	}
 
 	for _, versionStr := range versionStrings {
-		if versionStr == thisVersionStr {
+		if "go"+versionStr == thisVersionStr {
 			installed, versionDir = true, filepath.Join(gvmRoot, thisVersionStr)
 			return
 		}
@@ -190,10 +201,14 @@ func (v *version) checkInstallation() (installed bool, versionDir string, err er
 	return
 }
 
-func (v *version) IsInstalled() bool {
-	if v.isDecompressed == no {
+func (v *Version) IsInstalled() bool {
+	if v.isDecompressed == yes {
 		return true
 	}
 
 	return false
+}
+
+func (v *Version) GetInstallationDir() string {
+	return v.dir
 }

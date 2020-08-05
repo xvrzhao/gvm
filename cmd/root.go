@@ -105,6 +105,6 @@ func initConfig() {
 
 func isRootUser(cmd *cobra.Command, args []string) {
 	if os.Getuid() != 0 {
-		log.Fatalf("Permission denied. Please execute the `install` command as the root user, add `sudo` before the command.")
+		log.Fatalf("Permission denied. Please execute this command as the root user, add `sudo` before the command.")
 	}
 }

@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 )
 
 func decompress(tarGzFile, dstPath string) error {
@@ -36,7 +37,19 @@ func decompress(tarGzFile, dstPath string) error {
 	return nil
 }
 
-func download(v *version) (downloadedTarGzFile string, err error) {
+func isArchiveValid(tarGzFile string) bool {
+	cmd := exec.Command("tar", "-tzf", tarGzFile)
+	cmdStdErrBuf := new(bytes.Buffer)
+	cmd.Stderr = cmdStdErrBuf
+
+	if err := cmd.Run(); err != nil {
+		return false
+	}
+
+	return true
+}
+
+func download(v *Version) (downloadedTarGzFile string, err error) {
 	res, err := http.Get(v.downloadURL)
 	if err != nil {
 		err = e.Wrapper(err, "error when HTTP GET %s", v.downloadURL)
@@ -120,4 +133,71 @@ func GetInstalledGoVersionStrings() (versions []string, err error) {
 	}
 
 	return
+}
+
+func SwitchVersion(v *Version) error {
+	if err := v.Reload(); err != nil {
+		return e.Wrapper(err, "version reload error")
+	}
+
+	if !v.IsInstalled() {
+		return errors.New("the version is not installed")
+	}
+
+	fi, err := os.Lstat(goRoot)
+	if !os.IsNotExist(err) {
+		if err != nil {
+			return e.Wrapper(err, "Lstat goRoot error")
+		}
+
+		if fi.Mode()&os.ModeSymlink != 0 {
+			if err := os.Remove(goRoot); err != nil {
+				return e.Wrapper(err, "remove goRoot error")
+			}
+		} else {
+			if err := os.Rename(goRoot, goRoot+fmt.Sprintf(".old.%s",
+				time.Now().Format("20060102150405"))); err != nil {
+				return e.Wrapper(err, "rename goRoot error")
+			}
+		}
+	}
+
+	if err := os.Symlink(v.GetInstallationDir(), goRoot); err != nil {
+		return e.Wrapper(err, "error when creating symlink")
+	}
+
+	return nil
+}
+
+func GetCurrentVersionStr() (currentVersionStr string, err error) {
+	noVersionErr := errors.New("no current version")
+	gvmPath, err := os.Readlink(goRoot)
+	if err != nil {
+		err = noVersionErr
+		return
+	}
+
+	if n, er := fmt.Sscanf(gvmPath, gvmRoot+"/go%s", &currentVersionStr); n != 1 || er != nil {
+		err = noVersionErr
+		return
+	}
+
+	return
+}
+
+func RmVersion(v *Version) error {
+	currentVersion, err := GetCurrentVersionStr()
+	if err != nil {
+		return e.Wrapper(err, "GetCurrentVersionStr error")
+	}
+
+	if v.String() == currentVersion {
+		return errors.New("can not remove current version")
+	}
+
+	if err = os.RemoveAll(v.GetInstallationDir()); err != nil {
+		return e.Wrapper(err, "error when removing version dir")
+	}
+
+	return nil
 }

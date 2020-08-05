@@ -25,27 +25,52 @@ import (
 	"errors"
 	"fmt"
 	"github.com/spf13/cobra"
+	e "github.com/xvrzhao/utils/errors"
 	"gvm/funcs"
 )
 
 // installCmd represents the install command
 var installCmd = &cobra.Command{
-	Use:   "install semantic_version",
-	Short: "Install a specific version of Go",
-	Long:  "Install a specific version of Go, such as: `sudo gvm install 1.14.6`. If you are in China, add the flag `--cn`.",
-	PreRun: isRootUser,
+	Use:     "install SEMANTIC_VERSION",
+	Aliases: []string{"i", "add"},
+	Short:   "Install a specific version of Go",
+	Long:    "Install a specific version of Go, such as: `sudo gvm install 1.14.6`. If you are in China, add the flag `--cn`.",
+	PreRun:  isRootUser,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 1 {
 			return errors.New("need a version of Go to install")
 		}
+
 		inCn, _ := cmd.Flags().GetBool("cn")
 		v, err := funcs.NewVersion(args[0], inCn)
 		if err != nil {
-			return err
+			return e.Wrapper(err, "new version error")
 		}
-		v.Download()
-		v.Decompress()
-		fmt.Println("> Complete!")
+
+		force, _ := cmd.Flags().GetBool("force")
+
+		fmt.Print("downloading ... ")
+
+		if err = v.Download(force); err != nil {
+			return e.Wrapper(err, "download error")
+		}
+
+		fmt.Print("done\ndecompressing ... ")
+
+		if err = v.Decompress(force); err != nil {
+			return e.Wrapper(err, "decompress error")
+		}
+
+		fmt.Println("done")
+
+		wantToSwitch, _ := cmd.Flags().GetBool("switch")
+		if wantToSwitch {
+			rootCmd.SetArgs([]string{"switch", v.String()})
+			if err = rootCmd.Execute(); err != nil {
+				return e.Wrapper(err, "switch command executing error")
+			}
+		}
+
 		return nil
 	},
 }
@@ -53,15 +78,10 @@ var installCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(installCmd)
 
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// installCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// installCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-
-	installCmd.Flags().Bool("cn", false, "Use https://golang.google.cn to download.")
+	installCmd.Flags().Bool("cn", false,
+		"Use https://golang.google.cn to download.")
+	installCmd.Flags().BoolP("force", "f", false,
+		"Ignore the already installed, download and install again.")
+	installCmd.Flags().BoolP("switch", "s", false,
+		"Switch to the version after installation.")
 }

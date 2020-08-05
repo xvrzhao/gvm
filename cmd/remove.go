@@ -29,41 +29,46 @@ import (
 	"gvm/funcs"
 )
 
-// switchCmd represents the switch command
-var switchCmd = &cobra.Command{
-	Use:     "switch SEMANTIC_VERSION",
-	Aliases: []string{"s"},
+var removeCmd = &cobra.Command{
+	Use:     "remove SEMANTIC_VERSION [SEMANTIC_VERSION...]",
+	Aliases: []string{"rm", "uninstall"},
 	Short:   "A brief description of your command",
 	Long:    ``,
 	PreRun:  isRootUser,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) <= 0 {
-			return errors.New("need a version of Go to switch")
+			return errors.New("no version to delete")
 		}
 
-		inCn, _ := cmd.Flags().GetBool("cn")
-		v, err := funcs.NewVersion(args[0], inCn)
+		curVersion, err := funcs.GetCurrentVersionStr()
 		if err != nil {
-			return e.Wrapper(err, "new version error")
+			return e.Wrapper(err, "GetCurrentVersionStr error")
 		}
 
-		wantToInstall, _ := cmd.Flags().GetBool("install")
-		if !v.IsInstalled() && wantToInstall {
-			args := []string{"install", v.String()}
-			if inCn {
-				args = append(args, "--cn")
+		versions := make([]*funcs.Version, 0)
+		for _, semVerStr := range args {
+			v, err := funcs.NewVersion(semVerStr, false)
+			if err != nil {
+				return e.Wrapper(err, "error when new version %s", semVerStr)
 			}
 
-			rootCmd.SetArgs(args)
-			if err = rootCmd.Execute(); err != nil {
-				return e.Wrapper(err, "install command executing error")
+			if !v.IsInstalled() {
+				return fmt.Errorf("go%s is not installed", v.String())
 			}
+
+			if v.String() == curVersion {
+				return errors.New("can not remove current version")
+			}
+
+			versions = append(versions, v)
 		}
 
-		fmt.Print("switching version ... ")
+		fmt.Print("remove versions ... ")
 
-		if err := funcs.SwitchVersion(v); err != nil {
-			return e.Wrapper(err, "switch version error")
+		for _, v := range versions {
+			if err = funcs.RmVersion(v); err != nil {
+				return e.Wrapper(err, "RmVersion error")
+			}
 		}
 
 		fmt.Println("done")
@@ -72,18 +77,5 @@ var switchCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(switchCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// switchCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// switchCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-
-	switchCmd.Flags().Bool("cn", false, "Use https://golang.google.cn to download.")
-	switchCmd.Flags().BoolP("install", "i", false, "Install if the version is not installed.")
+	rootCmd.AddCommand(removeCmd)
 }
