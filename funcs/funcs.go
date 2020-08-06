@@ -155,15 +155,28 @@ func SwitchVersion(v *Version) error {
 				return e.Wrapper(err, "remove goRoot error")
 			}
 		} else {
-			if err := os.Rename(goRoot, goRoot+fmt.Sprintf(".old.%s",
-				time.Now().Format("20060102150405"))); err != nil {
-				return e.Wrapper(err, "rename goRoot error")
+			if err := backupOldGoRoot(); err != nil {
+				return e.Wrapper(err, "backupOldGoRoot error")
 			}
 		}
 	}
 
 	if err := os.Symlink(v.GetInstallationDir(), goRoot); err != nil {
 		return e.Wrapper(err, "error when creating symlink")
+	}
+
+	return nil
+}
+
+func backupOldGoRoot() error {
+	cmd := exec.Command("mv", goRoot, fmt.Sprintf("%s.old.%s", goRoot,
+		time.Now().Format("20060102150405")))
+	cmdStdErr := new(bytes.Buffer)
+	cmd.Stderr = cmdStdErr
+
+	if err := cmd.Run(); err != nil {
+		return e.Wrapper(fmt.Errorf("command run error: %w, stderr output: %q", err, cmdStdErr.String()),
+			"command run error")
 	}
 
 	return nil
