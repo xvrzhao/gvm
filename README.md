@@ -1,4 +1,7 @@
 # GVM
+![GitHub tag (latest SemVer)](https://img.shields.io/github/v/tag/xvrzhao/gvm?label=version)
+[![GitHub issues](https://img.shields.io/github/issues/xvrzhao/gvm)](https://github.com/xvrzhao/gvm/issues)
+[![GitHub license](https://img.shields.io/github/license/xvrzhao/gvm)](https://github.com/xvrzhao/gvm/blob/master/LICENSE)
 
 GVM is a Go version manager. You can use commands of `install`, `list`, `switch` and `remove` to 
 manage local installation of multiple Go versions.
@@ -28,7 +31,3 @@ For all available commands, see:
 ```
 $ gvm help
 ```
-
-## License
-
-[MIT](./LICENSE)
