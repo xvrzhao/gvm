@@ -3,7 +3,7 @@
 GVM is a Go version manager. You can use commands of `install`, `list`, `switch` and `remove` to 
 manage local installation of multiple Go versions.
 
-![usage demo](./usage.gif){:height="50%" width="50%" margin="0 auto"}
+<img src="usage.gif" alt="usage" style="height:295px;width:285px;display:block;margin:0 auto;border-radius:5px;">
 
 GVM is just support for Unix-like system yet, and the working mechanism is very simple. 
 GVM will create a `gvm` directory in `/usr/local` to host multiple versions of GOROOT, 
