@@ -10,9 +10,9 @@ import (
 
 var removeCmd = &cobra.Command{
 	Use:     "remove SEMANTIC_VERSION [SEMANTIC_VERSION...]",
-	Aliases: []string{"rm", "uninstall", "delete", "del"},
-	Short:   "A brief description of your command",
-	Long:    ``,
+	Aliases: []string{"rm", "uninstall", "ui", "delete", "del"},
+	Short:   "Remove one or more Go versions installed by GVM",
+	Long:    `Remove one or more Go versions installed by GVM.`,
 	PreRun:  isRootUser,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) <= 0 {

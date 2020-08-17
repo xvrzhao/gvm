@@ -11,10 +11,12 @@ import (
 var installCmd = &cobra.Command{
 	Use:     "install SEMANTIC_VERSION",
 	Aliases: []string{"i", "add", "a"},
-	Short:   "Install a specific version of Go",
-	Long:    "Install a specific version of Go, such as: `sudo gvm install 1.14.6`. If you are in China, add the flag `--cn`.",
-	PreRun:  isRootUser,
-	RunE:    runInstall,
+	Short:   "Install the specified Go version",
+	Long: `Install a specific version of Go, such as 'sudo gvm install 1.14.6' or 
+'sudo gvm install 1.15 -s', if you are in China, do not forget to add the 
+flag '--cn'.`,
+	PreRun: isRootUser,
+	RunE:   runInstall,
 }
 
 func runInstall(cmd *cobra.Command, args []string) error {
@@ -59,9 +61,9 @@ func init() {
 	rootCmd.AddCommand(installCmd)
 
 	installCmd.Flags().Bool("cn", false,
-		"Use https://golang.google.cn to download")
+		"use https://golang.google.cn to download")
 	installCmd.Flags().BoolP("force", "f", false,
-		"Ignore the installation, download and install again")
+		"ignore the installation, download and install again")
 	installCmd.Flags().BoolP("switch", "s", false,
-		"Switch to the version after its installation")
+		"switch to the version after its installation")
 }
