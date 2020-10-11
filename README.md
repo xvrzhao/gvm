@@ -3,8 +3,7 @@
 [![GitHub issues](https://img.shields.io/github/issues/xvrzhao/gvm)](https://github.com/xvrzhao/gvm/issues)
 [![GitHub license](https://img.shields.io/github/license/xvrzhao/gvm)](https://github.com/xvrzhao/gvm/blob/master/LICENSE)
 
-GVM is a Go version manager. You can use commands of `install`, `list`, `switch` and `remove` to 
-manage local installation of multiple Go versions.
+GVM is a Go version manager written in Go language, it provides some useful commands like `install`, `list`, `switch` and `remove` to manage local installation of multiple Go versions.
 
 <img src="usage.gif" alt="usage" width="40%" height="40%" />
 
