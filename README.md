@@ -24,7 +24,7 @@ There are two ways to install GVM.
 If you have installed Go before, just execute the following command:
 
 ```
-$ go install github.com/xvrzhao/gvm
+$ go install github.com/xvrzhao/gvm@latest
 ```
 
 **Note**: 
