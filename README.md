@@ -35,7 +35,7 @@ But sometimes it may prompt `sudo: gvm: command not found`, that is, the root us
 
 ### Download the binary
 
-Download the binary correspond to your OS in [Releases Page](https://github.com/xvrzhao/gvm/releases).
+Another way is downloading the binary file corresponding to your operating system in the [Releases Page](https://github.com/xvrzhao/gvm/releases).
 
 ## Commands
 
