@@ -21,7 +21,7 @@ There are two ways to install GVM.
 
 ### Install by Go
 
-If you have installed Go before, just execute the command:
+If you have installed Go before, just execute the following command:
 
 ```
 $ go install github.com/xvrzhao/gvm
@@ -29,9 +29,9 @@ $ go install github.com/xvrzhao/gvm
 
 **Note**: 
 
-This will install the GVM binary into your `$GOBIN` (same as `$GOPATH/bin`) directory. If you have added `$GOBIN` to `$PATH`, you can use GVM commands directly. However, some subcommands (like `switch`, `install`, etc.) need to write files in `/usr/local/`, so please make sure you have the appropriate permissions. You can use the root user to execute the GVM commands, like `sudo gvm [command]`.
+This will install the GVM binary into your `$GOBIN` (same as `$GOPATH/bin`) directory. If you have added `$GOBIN` to `$PATH`, you can use GVM commands directly. However, some subcommands (like `switch`, `install`, etc.) need to write files in `/usr/local/`, so please make sure you have the appropriate permissions. You can execute the GVM commands with root privilege, like `sudo gvm [command]`.
 
-But sometimes it may prompt `sudo: gvm: command not found`, that is, the root user cannot find GVM binary in the `$PATH` directories. Because `sudo` does not use shell login configurations (`/etc/profile`, `$HOME/.bashrc`, etc.) to initialize the `$PATH` environment variable, `$GOBIN` is not at the `$PATH`. Therefore, when the current user is not `root`, you can use GVM with `sudo $(which gvm) [command]`. Or, thoroughly, install and use GVM under `root` user login.
+But sometimes it may prompt `sudo: gvm: command not found`, that is, the root user cannot find GVM binary in his/her `$PATH` directories. Because `sudo` does not use shell login configurations (`/etc/profile`, `$HOME/.bashrc`, etc.) to initialize the `$PATH` environment variable, `$GOBIN` is not the part of `$PATH`. Therefore, when the current user is not `root`, you can use GVM with `sudo $(which gvm) [command]`. Or, thoroughly, install and use GVM under `root` user login.
 
 ### Download the binary
 
