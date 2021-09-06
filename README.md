@@ -17,16 +17,46 @@ Multiple versions of Go installed by GVM can share the same GOPATH compatibly, a
 
 ## Installation
 
+There are two ways to install GVM.
+
+### Install by Go
+
+If you have installed Go before, just execute the command:
+
 ```
-$ go get github.com/xvrzhao/gvm
+$ go install github.com/xvrzhao/gvm
 ```
 
-This will install the `gvm` bin command into your `$GOPATH/bin` directory.
+**Note**: 
+
+This will install the GVM binary into your `$GOBIN` (same as `$GOPATH/bin`) directory. If you have added `$GOBIN` to `$PATH`, you can use GVM commands directly. However, some subcommands (like `switch`, `install`, etc.) need to write files in `/usr/local/`, so please make sure you have the appropriate permissions. You can use the root user to execute the GVM commands, like `sudo gvm [command]`.
+
+But sometimes it may prompt `sudo: gvm: command not found`, that is, the root user cannot find GVM binary in the `$PATH` directories. Because `sudo` does not use shell login configurations (`/etc/profile`, `$HOME/.bashrc`, etc.) to initialize the `$PATH` environment variable, `$GOBIN` is not at the `$PATH`. Therefore, when the current user is not `root`, you can use GVM with `sudo $(which gvm) [command]`. Or, thoroughly, install and use GVM under `root` user login.
+
+### Download the binary
+
+Download the binary correspond to your OS in [Releases Page](https://github.com/xvrzhao/gvm/releases).
 
 ## Commands
 
-For all available commands, see:
+For examples:
 
 ```
-$ gvm help
+# install and switch to go1.16.3, `--cn` is required for Mainland China.
+$ sudo gvm install 1.16.3 --switch --cn 
+
+# list all versions managed by GVM.
+$ gvm list
+
+# remove go1.16.3
+$ gvm remove 1.16.3
+
+# switch to go1.17
+$ gvm switch 1.17
+```
+
+For all available commands and flags, see:
+
+```
+$ gvm help [subcommand]
 ```
