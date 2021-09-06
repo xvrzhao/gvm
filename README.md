@@ -23,7 +23,7 @@ There are two ways to install GVM.
 
 If you have installed Go before, just execute the following command:
 
-```bash
+```
 $ go install github.com/xvrzhao/gvm
 ```
 
@@ -57,6 +57,6 @@ $ gvm switch 1.17
 
 For all available commands and flags, see:
 
-```bash
+```
 $ gvm help [subcommand]
 ```
