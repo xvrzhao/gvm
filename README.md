@@ -41,7 +41,7 @@ Download the binary correspond to your OS in [Releases Page](https://github.com/
 
 For examples:
 
-```
+```bash
 # install and switch to go1.16.3, `--cn` is required for Mainland China.
 $ sudo gvm install 1.16.3 --switch --cn 
 
