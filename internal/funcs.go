@@ -1,10 +1,9 @@
-package funcs
+package internal
 
 import (
 	"bytes"
 	"errors"
 	"fmt"
-	e "github.com/xvrzhao/utils/errors"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -15,27 +14,9 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	e "github.com/xvrzhao/utils/errors"
 )
-
-func decompress(tarGzFile, dstPath string) error {
-	oldUmask := syscall.Umask(0)
-	defer syscall.Umask(oldUmask)
-
-	if err := os.MkdirAll(dstPath, os.ModePerm); err != nil {
-		return e.Wrapper(err, "mkdir %s error", dstPath)
-	}
-
-	cmd := exec.Command("tar", "-C", dstPath, "-xzf", tarGzFile)
-	cmdStdErrBuf := new(bytes.Buffer)
-	cmd.Stderr = cmdStdErrBuf
-
-	if err := cmd.Run(); err != nil {
-		return e.Wrapper(fmt.Errorf("command run error: %w, stderr output: %q", err, cmdStdErrBuf.String()),
-			"command run error")
-	}
-
-	return nil
-}
 
 func isArchiveValid(tarGzFile string) bool {
 	cmd := exec.Command("tar", "-tzf", tarGzFile)
@@ -52,7 +33,7 @@ func isArchiveValid(tarGzFile string) bool {
 func download(v *Version) (downloadedTarGzFile string, err error) {
 	res, err := http.Get(v.downloadURL)
 	if err != nil {
-		err = e.Wrapper(err, "error when HTTP GET %s", v.downloadURL)
+		err = fmt.Errorf("failed to GET %s: %w", v.downloadURL, err)
 		return
 	}
 	defer res.Body.Close()
@@ -61,21 +42,22 @@ func download(v *Version) (downloadedTarGzFile string, err error) {
 	defer syscall.Umask(oldUmask)
 
 	if err = os.MkdirAll(tmpPath, os.ModePerm); err != nil {
-		err = e.Wrapper(err, "error when mkdir %s", tmpPath)
+		err = fmt.Errorf("failed to mkdir %s: %w", tmpPath, err)
 		return
 	}
 
 	dstFile := filepath.Join(tmpPath, v.tarGzFile)
 	file, err := os.Create(dstFile)
 	if err != nil {
-		err = e.Wrapper(err, "error when creating dstFile")
+		err = fmt.Errorf("failed to create dstFile(%s): %w", dstFile, err)
 		return
 	}
 	defer file.Close()
 
-	_, err = io.Copy(file, res.Body)
+	resetGlobalProgressBar(res.ContentLength, "Downloading...")
+	_, err = io.Copy(io.MultiWriter(file, globalProgressBar), res.Body)
 	if err != nil {
-		err = e.Wrapper(err, "error when copying from res.Body to file")
+		err = fmt.Errorf("failed to copy from res.Body to file: %w", err)
 		return
 	}
 
@@ -201,7 +183,7 @@ func GetCurrentVersionStr() (currentVersionStr string, err error) {
 func RmVersion(v *Version) error {
 	currentVersion, err := GetCurrentVersionStr()
 	if err != nil {
-		return e.Wrapper(err, "GetCurrentVersionStr error")
+		return fmt.Errorf("failed to GetCurrentVersionStr: %w", err)
 	}
 
 	if v.String() == currentVersion {
@@ -209,7 +191,7 @@ func RmVersion(v *Version) error {
 	}
 
 	if err = os.RemoveAll(v.GetInstallationDir()); err != nil {
-		return e.Wrapper(err, "error when removing version dir")
+		return fmt.Errorf("failed to remove the version directory: %w", err)
 	}
 
 	return nil

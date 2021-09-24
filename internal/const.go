@@ -1,4 +1,4 @@
-package funcs
+package internal
 
 const (
 	prefixOfDownloadURL   = "https://golang.org/dl/"

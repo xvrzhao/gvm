@@ -2,40 +2,42 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/pkg/errors"
+
 	"github.com/spf13/cobra"
-	"github.com/xvrzhao/gvm/funcs"
+	"github.com/xvrzhao/gvm/internal"
 )
 
-var listCmd = &cobra.Command{
+var cmdList = &cobra.Command{
 	Use:     "list",
 	Aliases: []string{"ls", "l"},
 	Short:   "List all Go versions installed by GVM",
-	Long:    `List all Go versions installed by GVM, the current version marked by '*'.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		versions, err := funcs.GetInstalledGoVersionStrings()
-		if err != nil {
-			return errors.Wrap(err, "GetInstalledGoVersionStrings error")
-		}
-		if len(versions) <= 0 {
-			fmt.Println("empty")
-			return nil
-		}
+	Long:    `List all Go versions installed by GVM, the current version marked by '>'.`,
+	RunE:    runCmdList,
+}
 
-		curVersion, noVersionErr := funcs.GetCurrentVersionStr()
-
-		for _, version := range versions {
-			if noVersionErr == nil && curVersion == version {
-				fmt.Printf("* %s\n", curVersion)
-			} else {
-				fmt.Printf("  %s\n", version)
-			}
-		}
-
+func runCmdList(cmd *cobra.Command, args []string) error {
+	versions, err := internal.GetInstalledGoVersionStrings()
+	if err != nil {
+		return fmt.Errorf("failed to GetInstalledGoVersionStrings: %w", err)
+	}
+	if len(versions) <= 0 {
+		fmt.Println("no Go version managed by GVM yet")
 		return nil
-	},
+	}
+
+	curVersion, noVersionErr := internal.GetCurrentVersionStr()
+
+	for _, version := range versions {
+		if noVersionErr == nil && curVersion == version {
+			fmt.Printf("> \033[36m%s\033[0m\n", curVersion)
+		} else {
+			fmt.Printf("  %s\n", version)
+		}
+	}
+
+	return nil
 }
 
 func init() {
-	rootCmd.AddCommand(listCmd)
+	app.AddCommand(cmdList)
 }

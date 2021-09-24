@@ -1,13 +1,14 @@
-package funcs
+package internal
 
 import (
 	"errors"
 	"fmt"
-	e "github.com/xvrzhao/utils/errors"
 	"log"
 	"os"
 	"path/filepath"
 	"runtime"
+
+	e "github.com/xvrzhao/utils/errors"
 )
 
 type semantics struct {
@@ -135,26 +136,12 @@ func (v *Version) Decompress(force bool) error {
 		return errors.New("version is not downloaded")
 	}
 
-	goDir := filepath.Join(gvmRoot, "go")
-	vgoDir := filepath.Join(gvmRoot, fmt.Sprintf("go%v", v.semantics))
-
-	if err := os.RemoveAll(goDir); err != nil {
-		return e.Wrapper(err, "RemoveAll %s error", goDir)
+	dir, err := decompress(v.semantics.String(), v.downloadedTarGzFile)
+	if err != nil {
+		return fmt.Errorf("failed to decompress: %w", err)
 	}
 
-	if err := os.RemoveAll(vgoDir); err != nil {
-		return e.Wrapper(err, "RemoveAll %s error", vgoDir)
-	}
-
-	if err := decompress(v.downloadedTarGzFile, gvmRoot); err != nil {
-		return e.Wrapper(err, "decompress error")
-	}
-
-	if err := os.Rename(goDir, vgoDir); err != nil {
-		return e.Wrapper(err, "error when renaming %s to %s", goDir, vgoDir)
-	}
-
-	v.isDecompressed, v.dir = yes, vgoDir
+	v.isDecompressed, v.dir = yes, dir
 	return nil
 }
 

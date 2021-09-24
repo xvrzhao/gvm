@@ -2,54 +2,46 @@ package cmd
 
 import (
 	"errors"
-	"fmt"
+
 	"github.com/spf13/cobra"
-	"github.com/xvrzhao/gvm/funcs"
+	"github.com/xvrzhao/gvm/internal"
 	e "github.com/xvrzhao/utils/errors"
 )
 
-var installCmd = &cobra.Command{
+var cmdInstall = &cobra.Command{
 	Use:     "install SEMANTIC_VERSION",
 	Aliases: []string{"i", "add", "a"},
 	Short:   "Install the specified Go version",
-	Long: `Install a specific version of Go, such as 'sudo gvm install 1.14.6' or 
-'sudo gvm install 1.15 -s', if you are in China, do not forget to add the 
-flag '--cn'.`,
-	PreRun: isRootUser,
-	RunE:   runInstall,
+	Long:    internal.CmdDescriptionInstall,
+	PreRun:  isRootUser,
+	RunE:    runCmdInstall,
 }
 
-func runInstall(cmd *cobra.Command, args []string) error {
+func runCmdInstall(cmd *cobra.Command, args []string) error {
 	if len(args) < 1 {
 		return errors.New("need a version of Go to install")
 	}
 
 	inCn, _ := cmd.Flags().GetBool("cn")
-	v, err := funcs.NewVersion(args[0], inCn)
+	v, err := internal.NewVersion(args[0], inCn)
 	if err != nil {
 		return e.Wrapper(err, "new version error")
 	}
 
 	force, _ := cmd.Flags().GetBool("force")
 
-	fmt.Print("downloading ... ")
-
 	if err = v.Download(force); err != nil {
 		return e.Wrapper(err, "download error")
 	}
-
-	fmt.Print("done\ndecompressing ... ")
 
 	if err = v.Decompress(force); err != nil {
 		return e.Wrapper(err, "decompress error")
 	}
 
-	fmt.Println("done")
-
 	wantToSwitch, _ := cmd.Flags().GetBool("switch")
 	if wantToSwitch {
-		rootCmd.SetArgs([]string{"switch", v.String()})
-		if err = rootCmd.Execute(); err != nil {
+		app.SetArgs([]string{"switch", v.String()})
+		if err = app.Execute(); err != nil {
 			return e.Wrapper(err, "switch command executing error")
 		}
 	}
@@ -58,12 +50,9 @@ func runInstall(cmd *cobra.Command, args []string) error {
 }
 
 func init() {
-	rootCmd.AddCommand(installCmd)
+	cmdInstall.Flags().Bool("cn", false, "use https://golang.google.cn to download")
+	cmdInstall.Flags().BoolP("force", "f", false, "ignore the installation, download and install again")
+	cmdInstall.Flags().BoolP("switch", "s", false, "switch to the version after its installation")
 
-	installCmd.Flags().Bool("cn", false,
-		"use https://golang.google.cn to download")
-	installCmd.Flags().BoolP("force", "f", false,
-		"ignore the installation, download and install again")
-	installCmd.Flags().BoolP("switch", "s", false,
-		"switch to the version after its installation")
+	app.AddCommand(cmdInstall)
 }
