@@ -9,7 +9,7 @@ import (
 	"github.com/xvrzhao/gvm/internal"
 )
 
-var app = &cobra.Command{
+var App = &cobra.Command{
 	Use:   "gvm",
 	Short: "GVM is a go version manager",
 	Long:  internal.CmdDescriptionRoot,
@@ -18,13 +18,8 @@ var app = &cobra.Command{
 			log.Fatal("Sorry, GVM does not support Windows platform at the moment.")
 		}
 	},
-}
-
-func Execute() {
-	if err := app.Execute(); err != nil {
-		log.Println(err)
-		os.Exit(1)
-	}
+	SilenceErrors: true,
+	SilenceUsage:  true,
 }
 
 func isRootUser(cmd *cobra.Command, args []string) {

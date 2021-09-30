@@ -3,29 +3,15 @@ package internal
 import (
 	"errors"
 	"fmt"
-	"log"
-	"os"
 	"path/filepath"
 	"runtime"
 
 	e "github.com/xvrzhao/utils/errors"
 )
 
-type semantics struct {
-	major, minor, patch uint8
-}
-
-func (s semantics) String() string {
-	v := fmt.Sprintf("%d.%d", s.major, s.minor)
-	if s.patch != 0 {
-		v = fmt.Sprintf("%s.%d", v, s.patch)
-	}
-	return v
-}
-
 type Version struct {
 	// env
-	semantics
+	Semantics
 	os          string
 	arch        string
 	tarGzFile   string
@@ -40,15 +26,14 @@ type Version struct {
 	dir            string
 }
 
-func NewVersion(semver string, inCn bool) (v *Version, err error) {
-	sem, err := checkSemver(semver)
+func NewVersion(version string, inCn bool) (v *Version, err error) {
+	sem, err := NewSemantics(version)
 	if err != nil {
-		err = e.Wrapper(err, "checkSemver error")
-		return
+		return nil, fmt.Errorf("NewSemantics failed: %w", err)
 	}
 
 	v = &Version{
-		semantics:   sem,
+		Semantics:   sem,
 		os:          runtime.GOOS,
 		arch:        runtime.GOARCH,
 		tarGzFile:   "",
@@ -73,33 +58,33 @@ func NewVersion(semver string, inCn bool) (v *Version, err error) {
 }
 
 func (v *Version) Reload() error {
-	if downloaded, downloadedTarGzFile, err := v.checkDownloading(); err != nil {
+	if filePath, isDownloaded, err := v.checkDownload(); err != nil {
 		return e.Wrapper(err, "checkDownloading error")
-	} else if downloaded {
-		v.isDownloaded, v.downloadedTarGzFile = yes, downloadedTarGzFile
+	} else if isDownloaded {
+		v.isDownloaded, v.downloadedTarGzFile = yes, filePath
 	} else {
-		v.isDownloaded = no
+		v.isDownloaded, v.downloadedTarGzFile = no, ""
 	}
 
-	if installed, dir, err := v.checkInstallation(); err != nil {
+	if dir, isInstalled, err := v.checkInstallation(); err != nil {
 		return e.Wrapper(err, "checkInstallation error")
-	} else if installed {
+	} else if isInstalled {
 		v.isDecompressed, v.dir = yes, dir
 	} else {
-		v.isDecompressed = no
+		v.isDecompressed, v.dir = no, ""
 	}
 
 	return nil
 }
 
 func (v *Version) buildTarGzFile() string {
-	v.tarGzFile = fmt.Sprintf("go%v.%s-%s.tar.gz", v.semantics, v.os, v.arch)
+	v.tarGzFile = fmt.Sprintf("go%v.%s-%s.tar.gz", v.Semantics, v.os, v.arch)
 	return v.tarGzFile
 }
 
 func (v *Version) buildDownloadURL(inCn bool) string {
 	if v.tarGzFile == "" {
-		log.Fatal("*version.buildDownloadURL: *version.tarGzFile is empty")
+		panic("version.tarGzFile not built")
 	}
 
 	pf := prefixOfDownloadURL
@@ -113,14 +98,12 @@ func (v *Version) buildDownloadURL(inCn bool) string {
 
 func (v *Version) Download(force bool) (err error) {
 	if v.isDownloaded == yes && !force {
-		err = nil
-		return
+		return nil
 	}
 
 	file, err := download(v)
 	if err != nil {
-		err = e.Wrapper(err, "download error")
-		return
+		return e.Wrapper(err, "download error")
 	}
 
 	v.isDownloaded, v.downloadedTarGzFile = yes, file
@@ -136,7 +119,7 @@ func (v *Version) Decompress(force bool) error {
 		return errors.New("version is not downloaded")
 	}
 
-	dir, err := decompress(v.semantics.String(), v.downloadedTarGzFile)
+	dir, err := decompress(v.Semantics.String(), v.downloadedTarGzFile)
 	if err != nil {
 		return fmt.Errorf("failed to decompress: %w", err)
 	}
@@ -145,47 +128,28 @@ func (v *Version) Decompress(force bool) error {
 	return nil
 }
 
-func (v *Version) checkDownloading() (downloaded bool, downloadedTarGzFile string, err error) {
+func (v *Version) checkDownload() (filePath string, isDownloaded bool, err error) {
 	if v.tarGzFile == "" {
-		log.Fatal("*version.checkDownloading: *version.tarGzFile is empty")
+		panic("version.tarGzFile not built")
 	}
 
-	downloadedTarGzFile = filepath.Join(tmpPath, v.tarGzFile)
-	_, err = os.Stat(downloadedTarGzFile)
-	if os.IsNotExist(err) {
-		err = nil
-		return
-	}
-	if err != nil {
-		err = e.Wrapper(err, "error when getting fileInfo of downloaded tarGzFile")
-		return
-	}
-
-	if !isArchiveValid(downloadedTarGzFile) {
-		return
-	}
-
-	downloaded = true
-	return
+	return checkDownload(v.tarGzFile)
 }
 
-func (v *Version) checkInstallation() (installed bool, versionDir string, err error) {
-	thisVersionStr := fmt.Sprintf("go%v", v.semantics)
+func (v *Version) checkInstallation() (versionDir string, isInstalled bool, err error) {
+	thisVersionStr := fmt.Sprintf("go%v", v.Semantics)
 	versionStrings, err := GetInstalledGoVersionStrings()
 	if err != nil {
-		err = e.Wrapper(err, "GetInstalledGoVersionStrings error")
-		return
+		return "", false, fmt.Errorf("GetInstalledGoVersionStrings failed: %w", err)
 	}
 
 	for _, versionStr := range versionStrings {
 		if "go"+versionStr == thisVersionStr {
-			installed, versionDir = true, filepath.Join(gvmRoot, thisVersionStr)
-			return
+			return filepath.Join(gvmRoot, thisVersionStr), true, nil
 		}
 	}
 
-	installed = false
-	return
+	return "", false, nil
 }
 
 func (v *Version) IsInstalled() bool {

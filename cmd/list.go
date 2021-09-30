@@ -29,7 +29,7 @@ func runCmdList(cmd *cobra.Command, args []string) error {
 
 	for _, version := range versions {
 		if noVersionErr == nil && curVersion == version {
-			fmt.Printf("> \033[36m%s\033[0m\n", curVersion)
+			fmt.Printf("\033[36m> %s\033[0m\n", curVersion)
 		} else {
 			fmt.Printf("  %s\n", version)
 		}
@@ -39,5 +39,5 @@ func runCmdList(cmd *cobra.Command, args []string) error {
 }
 
 func init() {
-	app.AddCommand(cmdList)
+	App.AddCommand(cmdList)
 }

@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/spf13/cobra"
 	"github.com/xvrzhao/gvm/internal"
@@ -36,19 +35,16 @@ func runCmdSwitch(cmd *cobra.Command, args []string) error {
 			args = append(args, "--cn")
 		}
 
-		app.SetArgs(args)
-		if err = app.Execute(); err != nil {
+		App.SetArgs(args)
+		if err = App.Execute(); err != nil {
 			return e.Wrapper(err, "install command executing error")
 		}
 	}
-
-	fmt.Print("switching version ... ")
 
 	if err := internal.SwitchVersion(v); err != nil {
 		return e.Wrapper(err, "switch version error")
 	}
 
-	fmt.Println("done")
 	return nil
 }
 
@@ -56,5 +52,5 @@ func init() {
 	cmdSwitch.Flags().Bool("cn", false, "use https://golang.google.cn to download")
 	cmdSwitch.Flags().BoolP("install", "i", false, "install if the version is not installed")
 
-	app.AddCommand(cmdSwitch)
+	App.AddCommand(cmdSwitch)
 }

@@ -59,5 +59,5 @@ func runCmdRemove(cmd *cobra.Command, args []string) error {
 }
 
 func init() {
-	app.AddCommand(cmdRemove)
+	App.AddCommand(cmdRemove)
 }
