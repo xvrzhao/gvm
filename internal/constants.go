@@ -10,14 +10,6 @@ const (
 	goRoot   = usrLocal + "/go"
 )
 
-type myBool int
-
-const (
-	unknown myBool = iota
-	yes
-	no
-)
-
 const (
 	CmdDescriptionRoot = `GVM is a go version manager. You can use commands of install, list, switch 
 and remove to manage local installation of multiple Go versions.

@@ -16,7 +16,7 @@ var cmdList = &cobra.Command{
 }
 
 func runCmdList(cmd *cobra.Command, args []string) error {
-	versions, err := internal.GetInstalledGoVersionStrings()
+	versions, err := internal.GetAllInstalledVersions()
 	if err != nil {
 		return fmt.Errorf("failed to GetInstalledGoVersionStrings: %w", err)
 	}

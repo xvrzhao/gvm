@@ -12,19 +12,15 @@ import (
 	e "github.com/xvrzhao/utils/errors"
 )
 
-func isArchiveValid(tarGzFile string) bool {
-	cmd := exec.Command("tar", "-tzf", tarGzFile)
-	cmdStdErrBuf := new(bytes.Buffer)
-	cmd.Stderr = cmdStdErrBuf
-
-	if err := cmd.Run(); err != nil {
+func IsTarGzFileValid(tarGzFile string) bool {
+	if err := exec.Command("tar", "-tzf", tarGzFile).Run(); err != nil {
 		return false
 	}
 
 	return true
 }
 
-func GetInstalledGoVersionStrings() (versions []string, err error) {
+func GetAllInstalledVersions() (versions []string, err error) {
 	versions = make([]string, 0)
 
 	fis, err := ioutil.ReadDir(gvmRoot)
@@ -32,7 +28,7 @@ func GetInstalledGoVersionStrings() (versions []string, err error) {
 		return nil, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("ioutil.ReadDir failed: %w", err)
+		return nil, fmt.Errorf("failed to ReadDir: %w", err)
 	}
 
 	for _, fi := range fis {
@@ -127,6 +123,19 @@ func RmVersion(v *Version) error {
 
 	if err = os.RemoveAll(v.GetInstallationDir()); err != nil {
 		return fmt.Errorf("failed to remove the version directory: %w", err)
+	}
+
+	return nil
+}
+
+func decompressUsingTar(tarGzFile, dstPath string) error {
+	cmd := exec.Command("tar", "-C", dstPath, "-xzf", tarGzFile)
+	cmdStdErrBuf := new(bytes.Buffer)
+	cmd.Stderr = cmdStdErrBuf
+
+	if err := cmd.Run(); err != nil {
+		err = fmt.Errorf("command run error(%q), stderr output(%q)", err.Error(), cmdStdErrBuf.String())
+		return fmt.Errorf("failed to run command: %w", err)
 	}
 
 	return nil
