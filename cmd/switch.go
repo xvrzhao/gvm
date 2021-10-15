@@ -1,11 +1,10 @@
 package cmd
 
 import (
-	"errors"
+	"fmt"
 
 	"github.com/spf13/cobra"
 	"github.com/xvrzhao/gvm/internal"
-	e "github.com/xvrzhao/utils/errors"
 )
 
 var cmdSwitch = &cobra.Command{
@@ -13,36 +12,32 @@ var cmdSwitch = &cobra.Command{
 	Aliases: []string{"s"},
 	Short:   "Switch to the specified Go version",
 	Long:    internal.CmdDescriptionSwitch,
-	PreRun:  isRootUser,
+
+	PreRun:  checkPermission,
 	RunE:    runCmdSwitch,
+	PostRun: printDone,
 }
 
 func runCmdSwitch(cmd *cobra.Command, args []string) error {
 	if len(args) <= 0 {
-		return errors.New("need a version of Go to switch")
+		return internal.ErrNoVersionSpecified
 	}
 
 	inCn, _ := cmd.Flags().GetBool("cn")
 	v, err := internal.NewVersion(args[0], inCn)
 	if err != nil {
-		return e.Wrapper(err, "new version error")
+		return fmt.Errorf("failed to NewVersion: %w", err)
 	}
 
 	wantToInstall, _ := cmd.Flags().GetBool("install")
 	if !v.IsInstalled() && wantToInstall {
-		args := []string{"install", v.String()}
-		if inCn {
-			args = append(args, "--cn")
-		}
-
-		App.SetArgs(args)
-		if err = App.Execute(); err != nil {
-			return e.Wrapper(err, "install command executing error")
+		if err = v.Install(false); err != nil {
+			return fmt.Errorf("failed to Install: %w", err)
 		}
 	}
 
-	if err := internal.SwitchVersion(v); err != nil {
-		return e.Wrapper(err, "switch version error")
+	if err := v.Switch(); err != nil {
+		return fmt.Errorf("failed to switch: %w", err)
 	}
 
 	return nil

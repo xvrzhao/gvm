@@ -8,15 +8,15 @@ import (
 )
 
 var cmdInstall = &cobra.Command{
-	Use:     "install SEMANTIC_VERSION",
+	Use:     "install VERSION",
 	Aliases: []string{"i", "add", "get"},
 	Short:   "Install the specified Go version",
 	Long:    internal.CmdDescriptionInstall,
-	PreRun:  isRootUser,
+	Example: "gvm i 1.17.1 -s -c",
+
+	PreRun:  checkPermission,
 	RunE:    runCmdInstall,
-	PostRun: func(cmd *cobra.Command, args []string) {
-		fmt.Println("\033[2KDone!")
-	},
+	PostRun: printDone,
 }
 
 func runCmdInstall(cmd *cobra.Command, args []string) error {
@@ -27,16 +27,12 @@ func runCmdInstall(cmd *cobra.Command, args []string) error {
 	inCn, _ := cmd.Flags().GetBool("cn")
 	v, err := internal.NewVersion(args[0], inCn)
 	if err != nil {
-		return fmt.Errorf("internal.NewVersion failed: %w", err)
+		return fmt.Errorf("failed to NewVersion: %w", err)
 	}
 
 	force, _ := cmd.Flags().GetBool("force")
-	if err = v.Download(force); err != nil {
-		return fmt.Errorf("version.Download failed: %w", err)
-	}
-
-	if err = v.Decompress(force); err != nil {
-		return fmt.Errorf("version.Decompress failed: %w", err)
+	if err := v.Install(force); err != nil {
+		return fmt.Errorf("failed to Install: %w", err)
 	}
 
 	wantToSwitch, _ := cmd.Flags().GetBool("switch")
@@ -44,16 +40,16 @@ func runCmdInstall(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	if err = internal.SwitchVersion(v); err != nil {
-		return fmt.Errorf("SwitchVersion failed: %w", err)
+	if err = v.Switch(); err != nil {
+		return fmt.Errorf("failed to switch: %w", err)
 	}
 
 	return nil
 }
 
 func init() {
-	cmdInstall.Flags().Bool("cn", false, "use https://golang.google.cn to download")
-	cmdInstall.Flags().BoolP("force", "f", false, "ignore the installation, download and install again")
+	cmdInstall.Flags().BoolP("cn", "c", false, "use https://golang.google.cn to download")
+	cmdInstall.Flags().BoolP("force", "f", false, "ignore the installation and download, install again")
 	cmdInstall.Flags().BoolP("switch", "s", false, "switch to the version after its installation")
 
 	App.AddCommand(cmdInstall)

@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"sync"
 	"syscall"
 	"time"
 )
@@ -30,8 +29,8 @@ type Version struct {
 	dir            string
 }
 
-func NewVersion(version string, inCn bool) (*Version, error) {
-	sem, err := NewSemantics(version)
+func NewVersion(versionName string, inCn bool) (*Version, error) {
+	sem, err := NewSemantics(versionName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to NewSemantics: %w", err)
 	}
@@ -82,6 +81,18 @@ func (v *Version) Reload() error {
 	return nil
 }
 
+func (v *Version) Install(force bool) error {
+	if err := v.Download(force); err != nil {
+		return fmt.Errorf("failed to download: %w", err)
+	}
+
+	if err := v.Decompress(force); err != nil {
+		return fmt.Errorf("failed to decompress: %w", err)
+	}
+
+	return nil
+}
+
 func (v *Version) Download(force bool) error {
 	if v.isDownloaded == true && !force {
 		return nil
@@ -116,8 +127,7 @@ func (v *Version) download() (downloadedTarGzFile string, err error) {
 	}
 	defer file.Close()
 
-	resetGlobalProgressBar(res.ContentLength, "Downloading...")
-	_, err = io.Copy(io.MultiWriter(file, globalProgressBar), res.Body)
+	_, err = io.Copy(file, res.Body)
 	if err != nil {
 		return "", fmt.Errorf("failed to copy from res.Body to file: %w", err)
 	}
@@ -160,40 +170,7 @@ func (v *Version) decompress() (dir string, err error) {
 		return "", fmt.Errorf("failed to mkdir %q: %w", gvmRoot, err)
 	}
 
-	finishEvent := make(chan struct{})
-	wg := new(sync.WaitGroup)
-
-	wg.Add(1)
-	go func(ch <-chan struct{}, wg *sync.WaitGroup) {
-		defer wg.Done()
-
-		resetGlobalProgressBar(100, "Decompressing...")
-		defer globalProgressBar.Clear()
-
-		ticker := time.NewTicker(time.Millisecond * 30)
-		defer ticker.Stop()
-
-		for {
-			select {
-			case <-ch:
-				globalProgressBar.Finish()
-				time.Sleep(time.Second)
-				return
-			case <-ticker.C:
-				if !globalProgressBar.IsFinished() {
-					globalProgressBar.Add(1)
-				}
-			}
-		}
-	}(finishEvent, wg)
-
-	err = decompressUsingTar(v.tarGzFile, gvmRoot)
-
-	finishEvent <- struct{}{}
-	close(finishEvent)
-	wg.Wait()
-
-	if err != nil {
+	if err = DecompressUsingTar(tmpPath+"/"+v.tarGzFile, gvmRoot); err != nil {
 		return "", fmt.Errorf("failed to decompressUsingTar: %w", err)
 	}
 
@@ -202,6 +179,56 @@ func (v *Version) decompress() (dir string, err error) {
 	}
 
 	return vgoDir, nil
+}
+
+func (v *Version) Switch() error {
+	if err := v.Reload(); err != nil {
+		return fmt.Errorf("failed to Reload: %w", err)
+	}
+
+	if !v.IsInstalled() {
+		return ErrVersionNotInstalled
+	}
+
+	fi, err := os.Lstat(goRoot)
+	if !os.IsNotExist(err) {
+		if err != nil {
+			return fmt.Errorf("failed to Lstat goRoot: %w", err)
+		}
+
+		if fi.Mode()&os.ModeSymlink != 0 {
+			if err := os.Remove(goRoot); err != nil {
+				return fmt.Errorf("failed to remove goRoot: %w", err)
+			}
+		} else {
+			if err := os.Rename(goRoot, fmt.Sprintf("%s.backup.%s", goRoot, time.Now().Format("20060102150405"))); err != nil {
+				return fmt.Errorf("failed to backupOldGoRoot: %w", err)
+			}
+		}
+	}
+
+	if err := os.Symlink(v.GetInstallationDir(), goRoot); err != nil {
+		return fmt.Errorf("failed to Symlink: %w", err)
+	}
+
+	return nil
+}
+
+func (v *Version) Remove() error {
+	currentVersion, err := GetCurrentVersion()
+	if err != nil {
+		return fmt.Errorf("failed to GetCurrentVersion: %w", err)
+	}
+
+	if v.String() == currentVersion {
+		return ErrVersionIsInUse
+	}
+
+	if err = os.RemoveAll(v.GetInstallationDir()); err != nil {
+		return fmt.Errorf("failed to remove the version directory: %w", err)
+	}
+
+	return nil
 }
 
 func (v *Version) checkDownload() (filePath string, isDownloaded bool, err error) {

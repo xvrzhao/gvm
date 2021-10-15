@@ -24,7 +24,7 @@ reference of the symbol link.
 Multiple versions of Go installed by GVM can share the same GOPATH compatibly, 
 and this is also advocated by GVM.`
 
-	CmdDescriptionInstall = `Install a specific version of Go, such as 'sudo gvm install 1.14.6' or 
+	CmdDescriptionInstall = `Install a specific Go version, such as 'sudo gvm install 1.14.6' or 
 'sudo gvm install 1.15 -s', if you are in China, do not forget to add the 
 flag '--cn'.`
 

@@ -1,60 +1,56 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/spf13/cobra"
 	"github.com/xvrzhao/gvm/internal"
-	e "github.com/xvrzhao/utils/errors"
 )
 
 var cmdRemove = &cobra.Command{
-	Use:     "remove SEMANTIC_VERSION [SEMANTIC_VERSION...]",
+	Use:     "remove VERSION [VERSIONS]",
 	Aliases: []string{"rm", "uninstall", "ui", "delete", "del"},
-	Short:   "Remove one or more Go versions installed by GVM",
-	Long:    `Remove one or more Go versions installed by GVM.`,
-	PreRun:  isRootUser,
+	Short:   "Remove versions managed by GVM",
+
+	PreRun:  checkPermission,
 	RunE:    runCmdRemove,
+	PostRun: printDone,
 }
 
 func runCmdRemove(cmd *cobra.Command, args []string) error {
 	if len(args) <= 0 {
-		return errors.New("no version to delete")
+		return internal.ErrNoVersionSpecified
 	}
 
-	curVersion, err := internal.GetCurrentVersionStr()
+	curVersion, err := internal.GetCurrentVersion()
 	if err != nil {
-		return e.Wrapper(err, "GetCurrentVersionStr error")
+		return fmt.Errorf("failed to GetCurrentVersion: %w", err)
 	}
 
 	versions := make([]*internal.Version, 0)
-	for _, semVerStr := range args {
-		v, err := internal.NewVersion(semVerStr, false)
+	for _, versionName := range args {
+		v, err := internal.NewVersion(versionName, false)
 		if err != nil {
-			return e.Wrapper(err, "error when new version %s", semVerStr)
+			return fmt.Errorf("failed to NewVersion: %w", err)
 		}
 
 		if !v.IsInstalled() {
-			return fmt.Errorf("go%s is not installed", v.String())
+			continue
 		}
 
 		if v.String() == curVersion {
-			return errors.New("can not remove current version")
+			return internal.ErrVersionIsInUse
 		}
 
 		versions = append(versions, v)
 	}
 
-	fmt.Print("remove versions ... ")
-
 	for _, v := range versions {
-		if err = internal.RmVersion(v); err != nil {
-			return e.Wrapper(err, "RmVersion error")
+		if err = v.Remove(); err != nil {
+			return fmt.Errorf("failed to remove go%v: %w", v, err)
 		}
 	}
 
-	fmt.Println("done")
 	return nil
 }
 

@@ -10,9 +10,10 @@ type Semantics struct {
 	major, minor, patch uint8
 }
 
-func NewSemantics(version string) (sem Semantics, err error) {
-	version = strings.TrimLeft(version, "v")
-	s := strings.Split(version, ".")
+func NewSemantics(versionName string) (sem Semantics, err error) {
+	versionName = strings.TrimLeft(versionName, "vVgo")
+	versionName = strings.TrimSuffix(versionName, ".0")
+	s := strings.Split(versionName, ".")
 
 	if len(s) < 2 || len(s) > 3 {
 		err = ErrInvalidVersionFormat
