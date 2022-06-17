@@ -18,7 +18,7 @@ var cmdList = &cobra.Command{
 func runCmdList(cmd *cobra.Command, args []string) error {
 	versions, err := internal.GetAllInstalledVersions()
 	if err != nil {
-		return fmt.Errorf("failed to GetInstalledGoVersionStrings: %w", err)
+		return fmt.Errorf("failed to GetAllInstalledVersions: %w", err)
 	}
 	if len(versions) <= 0 {
 		fmt.Println("Empty.")
@@ -29,7 +29,7 @@ func runCmdList(cmd *cobra.Command, args []string) error {
 
 	for _, version := range versions {
 		if err == nil && curVersion == version {
-			fmt.Printf("\033[36m✔  %s\033[0m\n", curVersion)
+			fmt.Printf("\033[1;36m✔  %s\033[0m\n", curVersion)
 		} else {
 			fmt.Printf("   %s\n", version)
 		}

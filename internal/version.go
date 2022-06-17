@@ -94,7 +94,7 @@ func (v *Version) Install(force bool) error {
 }
 
 func (v *Version) Download(force bool) error {
-	if v.isDownloaded == true && !force {
+	if v.isDownloaded && !force {
 		return nil
 	}
 
@@ -136,11 +136,11 @@ func (v *Version) download() (downloadedTarGzFile string, err error) {
 }
 
 func (v *Version) Decompress(force bool) error {
-	if v.isDecompressed == true && !force {
+	if v.isDecompressed && !force {
 		return nil
 	}
 
-	if v.isDownloaded != true {
+	if !v.isDownloaded {
 		return errors.New("version is not downloaded")
 	}
 
@@ -290,11 +290,7 @@ func (v *Version) buildDownloadURL(inCn bool) (string, error) {
 }
 
 func (v *Version) IsInstalled() bool {
-	if v.isDecompressed == true {
-		return true
-	}
-
-	return false
+	return v.isDecompressed
 }
 
 func (v *Version) GetInstallationDir() string {

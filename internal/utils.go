@@ -30,6 +30,8 @@ func DecompressUsingTar(tarGzFile, dstPath string) error {
 	return nil
 }
 
+// GetAllInstalledVersions reads go dirs under gvmRoot to get
+// all installed versions.
 func GetAllInstalledVersions() (versions []string, err error) {
 	versions = make([]string, 0)
 
@@ -50,6 +52,8 @@ func GetAllInstalledVersions() (versions []string, err error) {
 	return
 }
 
+// GetCurrentVersion reads the dst of symbolic link goRoot to
+// get the current version.
 func GetCurrentVersion() (currentVersion string, err error) {
 	noVersionErr := errors.New("no current version")
 

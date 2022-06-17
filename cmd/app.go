@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"runtime"
 
@@ -21,13 +20,15 @@ var App = &cobra.Command{
 
 func checkPermission(cmd *cobra.Command, args []string) {
 	if os.Getuid() != 0 {
-		log.Fatal("Permission denied, please execute this command as the root user.")
+		fmt.Fprintln(os.Stderr, "Permission denied, please execute this command as the root user.")
+		os.Exit(1)
 	}
 }
 
 func checkOS(cmd *cobra.Command, args []string) {
 	if runtime.GOOS == "windows" {
-		log.Fatal("Sorry, GVM does not support Windows platform at the moment.")
+		fmt.Fprintln(os.Stderr, "Sorry, GVM doesn't support Windows platform yet.")
+		os.Exit(1)
 	}
 }
 
