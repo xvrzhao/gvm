@@ -8,13 +8,12 @@ import (
 )
 
 var cmdRemove = &cobra.Command{
-	Use:     "remove VERSION [VERSIONS]",
-	Aliases: []string{"rm", "uninstall", "ui", "delete", "del"},
+	Use:     "remove VERSION...",
+	Aliases: []string{"rm", "uninstall", "delete", "del"},
 	Short:   "Remove versions managed by GVM",
 
-	PreRun:  checkPermission,
-	RunE:    runCmdRemove,
-	PostRun: printDone,
+	PreRun: checkPermission,
+	RunE:   runCmdRemove,
 }
 
 func runCmdRemove(cmd *cobra.Command, args []string) error {
@@ -46,11 +45,13 @@ func runCmdRemove(cmd *cobra.Command, args []string) error {
 	}
 
 	for _, v := range versions {
+		fmt.Printf("Removing go%v ...\n", v)
 		if err = v.Remove(); err != nil {
 			return fmt.Errorf("failed to remove go%v: %w", v, err)
 		}
 	}
 
+	fmt.Println("Done!")
 	return nil
 }
 

@@ -31,7 +31,3 @@ func checkOS(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 }
-
-func printDone(cmd *cobra.Command, args []string) {
-	fmt.Println("\033[2KDone!")
-}

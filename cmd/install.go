@@ -14,9 +14,8 @@ var cmdInstall = &cobra.Command{
 	Long:    internal.CmdDescriptionInstall,
 	Example: "gvm i 1.17.1 -s -c",
 
-	PreRun:  checkPermission,
-	RunE:    runCmdInstall,
-	PostRun: printDone,
+	PreRun: checkPermission,
+	RunE:   runCmdInstall,
 }
 
 func runCmdInstall(cmd *cobra.Command, args []string) error {
@@ -37,6 +36,7 @@ func runCmdInstall(cmd *cobra.Command, args []string) error {
 
 	wantToSwitch, _ := cmd.Flags().GetBool("switch")
 	if !wantToSwitch {
+		fmt.Println("Done!")
 		return nil
 	}
 
@@ -44,6 +44,7 @@ func runCmdInstall(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to switch: %w", err)
 	}
 
+	fmt.Println("Done!")
 	return nil
 }
 

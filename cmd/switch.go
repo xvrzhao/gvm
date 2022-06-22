@@ -13,9 +13,9 @@ var cmdSwitch = &cobra.Command{
 	Short:   "Switch to the specified Go version",
 	Long:    internal.CmdDescriptionSwitch,
 
-	PreRun:  checkPermission,
-	RunE:    runCmdSwitch,
-	PostRun: printDone,
+	PreRun: checkPermission,
+	RunE:   runCmdSwitch,
+	// PostRun: printDone,
 }
 
 func runCmdSwitch(cmd *cobra.Command, args []string) error {
