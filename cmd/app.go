@@ -18,16 +18,22 @@ var App = &cobra.Command{
 	SilenceUsage:     true,
 }
 
-func checkPermission(cmd *cobra.Command, args []string) {
-	if os.Getuid() != 0 {
-		fmt.Fprintln(os.Stderr, "Permission denied, please execute this command as the root user.")
-		os.Exit(1)
+var (
+	checkPermission = func(cmd *cobra.Command, args []string) {
+		if os.Getuid() != 0 {
+			fmt.Fprintln(os.Stderr, "Permission denied, please execute this command as the root user.")
+			os.Exit(1)
+		}
 	}
-}
 
-func checkOS(cmd *cobra.Command, args []string) {
-	if runtime.GOOS == "windows" {
-		fmt.Fprintln(os.Stderr, "Sorry, GVM doesn't support Windows platform yet.")
-		os.Exit(1)
+	checkOS = func(cmd *cobra.Command, args []string) {
+		if runtime.GOOS == "windows" {
+			fmt.Fprintln(os.Stderr, "Sorry, GVM doesn't support Windows platform yet.")
+			os.Exit(1)
+		}
 	}
-}
+
+	printDone = func(cmd *cobra.Command, args []string) {
+		fmt.Println("\nDone!")
+	}
+)

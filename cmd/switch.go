@@ -8,14 +8,14 @@ import (
 )
 
 var cmdSwitch = &cobra.Command{
-	Use:     "switch SEMANTIC_VERSION",
-	Aliases: []string{"s"},
+	Use:     "switch VERSION",
+	Aliases: []string{"s", "use"},
 	Short:   "Switch to the specified Go version",
 	Long:    internal.CmdDescriptionSwitch,
 
-	PreRun: checkPermission,
-	RunE:   runCmdSwitch,
-	// PostRun: printDone,
+	PreRun:  checkPermission,
+	RunE:    runCmdSwitch,
+	PostRun: printDone,
 }
 
 func runCmdSwitch(cmd *cobra.Command, args []string) error {
@@ -44,7 +44,7 @@ func runCmdSwitch(cmd *cobra.Command, args []string) error {
 }
 
 func init() {
-	cmdSwitch.Flags().Bool("cn", false, "use https://golang.google.cn to download")
+	cmdSwitch.Flags().BoolP("cn", "c", false, "use https://golang.google.cn to download")
 	cmdSwitch.Flags().BoolP("install", "i", false, "install if the version is not installed")
 
 	App.AddCommand(cmdSwitch)

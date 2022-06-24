@@ -12,10 +12,11 @@ var cmdInstall = &cobra.Command{
 	Aliases: []string{"i", "add", "get"},
 	Short:   "Install the specified Go version",
 	Long:    internal.CmdDescriptionInstall,
-	Example: "gvm i 1.17.1 -s -c",
+	Example: "gvm i 1.18.3 -s -c",
 
-	PreRun: checkPermission,
-	RunE:   runCmdInstall,
+	PreRun:  checkPermission,
+	RunE:    runCmdInstall,
+	PostRun: printDone,
 }
 
 func runCmdInstall(cmd *cobra.Command, args []string) error {
@@ -36,7 +37,6 @@ func runCmdInstall(cmd *cobra.Command, args []string) error {
 
 	wantToSwitch, _ := cmd.Flags().GetBool("switch")
 	if !wantToSwitch {
-		fmt.Println("Done!")
 		return nil
 	}
 
@@ -44,7 +44,6 @@ func runCmdInstall(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to switch: %w", err)
 	}
 
-	fmt.Println("Done!")
 	return nil
 }
 

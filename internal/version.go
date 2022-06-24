@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -83,7 +84,7 @@ func (v *Version) Reload() error {
 
 func (v *Version) Install(force bool) error {
 	if err := v.Download(force); err != nil {
-		return fmt.Errorf("failed to download: %w", err)
+		return fmt.Errorf("failed to Download: %w", err)
 	}
 
 	if err := v.Decompress(force); err != nil {
@@ -94,32 +95,45 @@ func (v *Version) Install(force bool) error {
 }
 
 func (v *Version) Download(force bool) error {
+	fmt.Printf("Downloading go%s archive ...    ", v.Semantics)
+
 	if v.isDownloaded && !force {
+		fmt.Println("\b\b\bcached")
 		return nil
 	}
 
-	file, err := v.download()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*3)
+	defer cancel()
+	file, err := v.download(ctx)
 	if err != nil {
+		fmt.Println("\b\b\bfailed")
 		return fmt.Errorf("failed to download: %w", err)
 	}
 
+	fmt.Println("\b\b\bdone")
 	v.isDownloaded, v.downloadedTarGzFile = true, file
 	return nil
 }
 
-func (v *Version) download() (downloadedTarGzFile string, err error) {
-	res, err := http.Get(v.downloadURL)
-	if err != nil {
-		return "", fmt.Errorf("failed to GET %s: %w", v.downloadURL, err)
-	}
-	defer res.Body.Close()
-
+func (v *Version) download(ctx context.Context) (downloadedTarGzFile string, err error) {
+	// mkdir -p /tmp/gvm
 	oldUmask := syscall.Umask(0)
 	defer syscall.Umask(oldUmask)
 	if err = os.MkdirAll(tmpPath, os.ModePerm); err != nil {
 		return "", fmt.Errorf("failed to mkdir %s: %w", tmpPath, err)
 	}
 
+	// issue request
+	res, err := http.Get(v.downloadURL)
+	if err != nil {
+		return "", fmt.Errorf("failed to GET %s: %w", v.downloadURL, err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("failed to GET %s: status code %d", v.downloadURL, res.StatusCode)
+	}
+
+	// create dst file
 	dstFile := filepath.Join(tmpPath, v.tarGzFile)
 	file, err := os.Create(dstFile)
 	if err != nil {
@@ -127,28 +141,55 @@ func (v *Version) download() (downloadedTarGzFile string, err error) {
 	}
 	defer file.Close()
 
-	_, err = io.Copy(file, res.Body)
-	if err != nil {
-		return "", fmt.Errorf("failed to copy from res.Body to file: %w", err)
+	// copy
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+	buf := make([]byte, 1<<10) // 1kb
+	total := res.ContentLength
+	read := 0
+	for {
+		select {
+		case <-ticker.C:
+			progress := float32(read) * 100 / float32(total)
+			if progress < 100 {
+				fmt.Printf("\b\b\b%2.0f%%", progress)
+			}
+		case <-ctx.Done():
+			return "", fmt.Errorf("failed to copy from res.Body to file: %w", ctx.Err())
+		default:
+			n, err := res.Body.Read(buf)
+			read += n
+			file.Write(buf[:n])
+			if err == io.EOF {
+				return dstFile, nil
+			}
+			if err != nil {
+				return "", fmt.Errorf("failed to copy from res.Body to file: %w", err)
+			}
+		}
 	}
-
-	return dstFile, nil
 }
 
 func (v *Version) Decompress(force bool) error {
+	fmt.Print("Decompressing the archive ... ")
+
 	if v.isDecompressed && !force {
+		fmt.Println("cached")
 		return nil
 	}
 
 	if !v.isDownloaded {
+		fmt.Println("failed")
 		return errors.New("version is not downloaded")
 	}
 
 	dir, err := v.decompress()
 	if err != nil {
+		fmt.Println("failed")
 		return fmt.Errorf("failed to decompress: %w", err)
 	}
 
+	fmt.Println("done")
 	v.isDecompressed, v.dir = true, dir
 	return nil
 }
@@ -190,27 +231,34 @@ func (v *Version) Switch() error {
 		return ErrVersionNotInstalled
 	}
 
+	fmt.Printf("Switching to go%s ... ", v.Semantics)
+
 	fi, err := os.Lstat(goRoot)
 	if !os.IsNotExist(err) {
 		if err != nil {
+			fmt.Println("failed")
 			return fmt.Errorf("failed to Lstat goRoot: %w", err)
 		}
 
 		if fi.Mode()&os.ModeSymlink != 0 {
 			if err := os.Remove(goRoot); err != nil {
+				fmt.Println("failed")
 				return fmt.Errorf("failed to remove goRoot: %w", err)
 			}
 		} else {
 			if err := os.Rename(goRoot, fmt.Sprintf("%s.backup.%s", goRoot, time.Now().Format("20060102150405"))); err != nil {
+				fmt.Println("failed")
 				return fmt.Errorf("failed to backupOldGoRoot: %w", err)
 			}
 		}
 	}
 
 	if err := os.Symlink(v.GetInstallationDir(), goRoot); err != nil {
+		fmt.Println("failed")
 		return fmt.Errorf("failed to Symlink: %w", err)
 	}
 
+	fmt.Println("done")
 	return nil
 }
 
